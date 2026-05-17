@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import tempfile
-
 from pyvis.network import Network
 
 from .data import get_node_attrs
@@ -136,14 +133,4 @@ def make_pyvis_graph(
             arrows="to",
         )
 
-    temp_file = tempfile.NamedTemporaryFile(
-        delete=False, suffix=".html", mode="w", encoding="utf-8"
-    )
-    network.save_graph(temp_file.name)
-    temp_file.close()
-
-    with open(temp_file.name, "r", encoding="utf-8") as handle:
-        html_content = handle.read()
-
-    os.unlink(temp_file.name)
-    return html_content
+    return network.generate_html()
