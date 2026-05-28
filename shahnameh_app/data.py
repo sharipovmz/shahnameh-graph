@@ -38,20 +38,38 @@ def load_data(path: str = "data_tajik.csv") -> pd.DataFrame:
 
 
 def build_node_metadata(dataframe: pd.DataFrame) -> dict[str, dict[str, str]]:
-    """Build normalized node metadata map for both Source and Target."""
-    metadata: dict[str, dict[str, str]] = {}
+    """Build normalized node metadata map for both Source and Target.
+
+    CSV semantics: Type column = Target's type; Side column = Source's side.
+    """
+    target_types: dict[str, str] = {}
+    source_sides: dict[str, str] = {}
 
     for _, row in dataframe.iterrows():
         source = row["Source"]
         target = row["Target"]
-        source_type = row["Type"]
-        source_side = row["Side"]
+        node_type = row["Type"]
 
-        metadata[source] = {"type": source_type, "side": source_side}
+        if source not in source_sides:
+            source_sides[source] = row["Side"]
 
-        if target not in metadata:
-            fallback_type, fallback_side = _infer_target_attrs(target)
-            metadata[target] = {"type": fallback_type, "side": fallback_side}
+        # Prefer Шахс so a character who owns/builds places keeps their person type.
+        if target not in target_types:
+            target_types[target] = node_type
+        elif node_type == "Шахс" and target_types[target] != "Шахс":
+            target_types[target] = "Шахс"
+
+    metadata: dict[str, dict[str, str]] = {}
+    for node in set(source_sides) | set(target_types):
+        node_type = target_types.get(node)
+        node_side = source_sides.get(node)
+
+        if node_type is None:
+            node_type = "Шахс"  # source-only nodes are characters
+        if node_side is None:
+            _, node_side = _infer_target_attrs(node)
+
+        metadata[node] = {"type": node_type, "side": node_side}
 
     return metadata
 
